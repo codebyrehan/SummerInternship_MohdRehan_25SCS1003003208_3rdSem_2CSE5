@@ -107,19 +107,13 @@ function FeatureCard({ feature, isMobile }) {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="w-full h-48 mb-6 pointer-events-none">
-        {!isMobile ? (
-          <Canvas camera={{ position: [0, 0, 5], fov: 40 }}>
-            <ambientLight intensity={0.6} />
-            <directionalLight position={[2, 2, 2]} />
-            <Suspense fallback={null}>
-              <FeatureIcon geometry={feature.icon} color={feature.color} isHovered={isHovered} />
-            </Suspense>
-          </Canvas>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded-xl">
-            <Bot size={48} className="text-primary" />
-          </div>
-        )}
+        <Canvas camera={{ position: [0, 0, 5], fov: 40 }} dpr={[1, 1.5]}>
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[2, 2, 2]} />
+          <Suspense fallback={null}>
+            <FeatureIcon geometry={feature.icon} color={feature.color} isHovered={isHovered} />
+          </Suspense>
+        </Canvas>
       </div>
       <h3 className="text-2xl mb-3">{feature.title}</h3>
       <p className="text-body leading-relaxed">{feature.desc}</p>
@@ -219,23 +213,16 @@ export default function Landing() {
         </div>
         
         <div className="md:w-1/2 h-[50vh] md:h-full relative w-full" ref={heroObjRef}>
-          {!isMobile ? (
-            <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-              <ambientLight intensity={0.6} />
-              <directionalLight position={[5, 5, 5]} intensity={1} />
-              <pointLight position={[-5, -5, -5]} intensity={0.5} />
-              <Suspense fallback={null}>
-                <HeroShape />
-                <ContactShadows position={[0, -2.5, 0]} opacity={0.6} scale={10} blur={2} far={4} />
-                <Environment preset="city" />
-              </Suspense>
-            </Canvas>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="w-64 h-64 bg-primary/20 rounded-full blur-3xl absolute animate-pulse"></div>
-              <img src="/vite.svg" alt="Resume App" className="w-48 h-48 drop-shadow-2xl z-10" />
-            </div>
-          )}
+          <Canvas camera={{ position: [0, 0, 8], fov: 45 }} dpr={[1, 1.5]}>
+            <ambientLight intensity={0.6} />
+            <directionalLight position={[5, 5, 5]} intensity={1} />
+            <pointLight position={[-5, -5, -5]} intensity={0.5} />
+            <Suspense fallback={null}>
+              <HeroShape />
+              <ContactShadows position={[0, -2.5, 0]} opacity={0.6} scale={10} blur={2} far={4} />
+              <Environment preset="city" />
+            </Suspense>
+          </Canvas>
         </div>
       </section>
 
@@ -273,20 +260,14 @@ export default function Landing() {
             </ul>
           </div>
           <div className="md:w-1/2 h-[50vh] w-full demo-3d">
-            {!isMobile ? (
-              <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
-                <ambientLight intensity={0.7} />
-                <directionalLight position={[5, 5, 5]} intensity={1} />
-                <Suspense fallback={null}>
-                  <DemoLaptop />
-                  <Environment preset="city" />
-                </Suspense>
-              </Canvas>
-            ) : (
-              <div className="w-full h-full bg-light rounded-2xl flex items-center justify-center font-syne text-2xl border border-gray-200">
-                Interactive Preview
-              </div>
-            )}
+            <Canvas camera={{ position: [0, 0, 5], fov: 45 }} dpr={[1, 1.5]}>
+              <ambientLight intensity={0.7} />
+              <directionalLight position={[5, 5, 5]} intensity={1} />
+              <Suspense fallback={null}>
+                <DemoLaptop />
+                <Environment preset="city" />
+              </Suspense>
+            </Canvas>
           </div>
         </div>
       </section>
@@ -316,15 +297,13 @@ export default function Landing() {
       {/* CTA Banner */}
       <section className="py-32 px-6 bg-light relative overflow-hidden flex flex-col items-center justify-center text-center">
         <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-          {!isMobile && (
-            <Canvas camera={{ position: [0, 0, 3] }}>
-              <ambientLight intensity={1} />
-              <directionalLight position={[2, 2, 2]} />
-              <Suspense fallback={null}>
-                <BlobShape />
-              </Suspense>
-            </Canvas>
-          )}
+          <Canvas camera={{ position: [0, 0, 3] }} dpr={[1, 1.5]}>
+            <ambientLight intensity={1} />
+            <directionalLight position={[2, 2, 2]} />
+            <Suspense fallback={null}>
+              <BlobShape />
+            </Suspense>
+          </Canvas>
         </div>
         <div className="z-10 relative">
           <h2 className="text-5xl font-syne md:text-7xl mb-8 font-black text-dark">Ready to land your <br/> dream job?</h2>
