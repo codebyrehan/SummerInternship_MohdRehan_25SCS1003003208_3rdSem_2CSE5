@@ -7,16 +7,25 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        syne: ['Syne', 'sans-serif'],
-        sans: ['"DM Sans"', 'sans-serif'],
+        sora: ['Sora', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
       },
       colors: {
-        primary: '#6c63ff',
-        secondary: '#00d4aa',
-        pearl: '#f5f5ff',
-        dark: '#0a0a0f',
-        light: '#f7f7ff',
-        body: '#555566',
+        background: '#05060f',
+        surface: '#0d0e1f',
+        card: '#12132a',
+        primary: '#6366f1',
+        secondary: '#06b6d4',
+        'text-primary': '#f1f5f9',
+        'text-muted': '#94a3b8',
+      },
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(135deg, #6366f1, #06b6d4)',
+      },
+      boxShadow: {
+        'glow-primary': '0 0 40px rgba(99,102,241,0.25)',
+        'glow-primary-hover': '0 0 60px rgba(99,102,241,0.4)',
       }
     },
   },
