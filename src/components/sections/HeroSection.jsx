@@ -7,28 +7,50 @@ import { Badge, Button } from '../ui/PremiumUI';
 
 function Hero3DScene() {
   const groupRef = useRef();
-  
-  // Mouse Parallax
+  const lineRef1 = useRef();
+  const lineRef2 = useRef();
+
+  // Mouse Parallax + floating animation
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
     const targetX = (state.mouse.x * Math.PI) / 15;
     const targetY = (state.mouse.y * Math.PI) / 15;
-    
+
     if (groupRef.current) {
       groupRef.current.rotation.y += (targetX - groupRef.current.rotation.y) * 0.1;
       groupRef.current.rotation.x += (-targetY - groupRef.current.rotation.x) * 0.1;
-      groupRef.current.position.y = Math.sin(t) * 0.1;
+      groupRef.current.position.y = Math.sin(t * 0.6) * 0.15;
     }
   });
 
   return (
     <group ref={groupRef}>
-      {/* Resume Mockup Plate */}
-      <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
-        <mesh position={[0, 0, 0.5]} castShadow receiveShadow>
-          <boxGeometry args={[2.5, 3.5, 0.05]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.1} roughness={0.2} />
-        </mesh>
+      {/* Resume Card — dark premium glass look */}
+      <Float speed={1.5} rotationIntensity={0.3} floatIntensity={0.8}>
+        <group position={[0, 0, 0.3]}>
+          {/* Card body - dark */}
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[2.6, 3.6, 0.08]} />
+            <meshStandardMaterial color="#0d0e1f" metalness={0.6} roughness={0.2} />
+          </mesh>
+          {/* Glowing indigo border frame */}
+          <mesh position={[0, 0, 0.05]}>
+            <boxGeometry args={[2.62, 3.62, 0.01]} />
+            <meshStandardMaterial color="#6366f1" emissive="#6366f1" emissiveIntensity={0.8} wireframe />
+          </mesh>
+          {/* Resume header line - cyan */}
+          <mesh position={[0, 1.3, 0.06]}>
+            <boxGeometry args={[1.8, 0.06, 0.01]} />
+            <meshStandardMaterial color="#06b6d4" emissive="#06b6d4" emissiveIntensity={1.5} />
+          </mesh>
+          {/* Resume content lines */}
+          {[-0.2, -0.5, -0.8, -1.1].map((y, i) => (
+            <mesh key={i} position={[i % 2 === 0 ? -0.2 : 0.1, y, 0.06]}>
+              <boxGeometry args={[i % 2 === 0 ? 1.4 : 1.0, 0.04, 0.01]} />
+              <meshStandardMaterial color="#6366f1" emissive="#6366f1" emissiveIntensity={0.5} transparent opacity={0.6} />
+            </mesh>
+          ))}
+        </group>
       </Float>
 
       {/* Abstract Glowing Sphere Behind */}

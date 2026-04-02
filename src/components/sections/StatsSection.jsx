@@ -1,9 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import React, { useRef, useState, useEffect } from 'react';
 import { Card, SectionHeading } from '../ui/PremiumUI';
-
-gsap.registerPlugin(ScrollTrigger);
 
 const stats = [
   { value: 10000, suffix: '+', label: 'Resumes Built' },
@@ -33,44 +29,70 @@ const testimonials = [
   }
 ];
 
-export default function StatsSection() {
-  const statRefs = useRef([]);
+function CountUpStat({ stat }) {
+  const [count, setCount] = useState(0);
+  const [triggered, setTriggered] = useState(false);
+  const ref = useRef(null);
 
   useEffect(() => {
-    statRefs.current.forEach((el, i) => {
-      if (!el) return;
-      const target = stats[i].value;
-      ScrollTrigger.create({
-        trigger: el,
-        start: 'top 85%',
-        onEnter: () => {
-          gsap.fromTo({ val: 0 }, 
-            { val: target, duration: 2.5, ease: 'power2.out',
-              onUpdate: function() {
-                el.textContent = Math.round(this.targets()[0].val).toLocaleString() + stats[i].suffix;
-              }
-            }
-          );
-        }
-      });
-    });
-  }, []);
+    // Use a polling approach that works with Lenis virtual scroll
+    const checkVisibility = () => {
+      if (!ref.current || triggered) return;
+      const rect = ref.current.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight * 0.9 && rect.bottom > 0;
+      if (inView) {
+        setTriggered(true);
+      }
+    };
+
+    // Poll on both real scroll and Lenis tick
+    window.addEventListener('scroll', checkVisibility, { passive: true });
+    // Also check on a timer for Lenis (which doesn't fire real scroll events always)
+    const interval = setInterval(checkVisibility, 100);
+
+    checkVisibility(); // check once on mount
+
+    return () => {
+      window.removeEventListener('scroll', checkVisibility);
+      clearInterval(interval);
+    };
+  }, [triggered]);
+
+  useEffect(() => {
+    if (!triggered) return;
+
+    const duration = 2000;
+    const startTime = performance.now();
+    const target = stat.value;
+
+    const tick = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      setCount(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+
+    requestAnimationFrame(tick);
+  }, [triggered, stat.value]);
 
   return (
+    <Card hover={false} className="text-center py-10">
+      <div ref={ref} className="text-5xl font-sora font-extrabold text-transparent bg-clip-text bg-gradient-primary mb-3">
+        {count.toLocaleString()}{stat.suffix}
+      </div>
+      <p className="text-text-muted font-medium text-sm">{stat.label}</p>
+    </Card>
+  );
+}
+
+export default function StatsSection() {
+  return (
     <section className="section-padding bg-surface">
-      {/* Stats Row */}
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-24">
           {stats.map((stat, i) => (
-            <Card key={i} hover={false} className="text-center py-10">
-              <div
-                ref={el => statRefs.current[i] = el}
-                className="text-5xl font-sora font-extrabold text-transparent bg-clip-text bg-gradient-primary mb-3"
-              >
-                0{stat.suffix}
-              </div>
-              <p className="text-text-muted font-medium text-sm">{stat.label}</p>
-            </Card>
+            <CountUpStat key={i} stat={stat} />
           ))}
         </div>
 
