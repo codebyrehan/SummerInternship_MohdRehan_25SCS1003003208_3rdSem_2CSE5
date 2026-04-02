@@ -1,4 +1,4 @@
-import React, { Suspense, useRef, useState, useEffect } from 'react';
+import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { ContactShadows, MeshDistortMaterial, Float, Environment } from '@react-three/drei';
 import { motion } from 'framer-motion';
@@ -55,7 +55,7 @@ function Hero3DScene() {
 
       {/* Abstract Glowing Sphere Behind */}
       <mesh position={[0, 0, -1]}>
-        <sphereGeometry args={[1.5, 64, 64]} />
+        <sphereGeometry args={[1.5, 32, 32]} />
         <MeshDistortMaterial
           color="#6366f1"
           envMapIntensity={1}
@@ -84,15 +84,6 @@ function Hero3DScene() {
 }
 
 export default function HeroSection() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 768px)');
-    setIsMobile(mediaQuery.matches);
-    const handler = (e) => setIsMobile(e.matches);
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
-  }, []);
 
   return (
     <section className="relative min-h-screen pt-32 pb-20 flex items-center overflow-hidden">
@@ -143,25 +134,16 @@ export default function HeroSection() {
 
         {/* Right 3D Scene */}
         <div className="h-[500px] lg:h-[700px] w-full relative">
-          {!isMobile ? (
-            <Suspense fallback={null}>
-              <Canvas camera={{ position: [0, 0, 7], fov: 45 }} dpr={[1, 2]}>
-                <ambientLight intensity={0.4} />
-                <directionalLight position={[5, 5, 5]} intensity={1} color="#ffffff" />
-                <pointLight position={[-3, 2, 2]} intensity={2} color="#06b6d4" />
-                
-                <Hero3DScene />
-                
-                <ContactShadows position={[0, -3.5, 0]} opacity={0.5} scale={15} blur={2.5} far={4.5} color="#6366f1" />
-                <Environment preset="city" />
-              </Canvas>
-            </Suspense>
-          ) : (
-            <div className="w-full h-full flex justify-center items-center">
-               <div className="w-64 h-64 bg-gradient-primary rounded-full blur-[100px] opacity-40 animate-pulse"></div>
-               <div className="absolute glass-card w-48 h-64 border-primary/30 z-10 animate-bounce" style={{ animationDuration: '3s' }}></div>
-            </div>
-          )}
+          <Suspense fallback={null}>
+            <Canvas camera={{ position: [0, 0, 7], fov: 45 }} dpr={[1, 1.5]}>
+              <ambientLight intensity={0.4} />
+              <directionalLight position={[5, 5, 5]} intensity={1} color="#ffffff" />
+              <pointLight position={[-3, 2, 2]} intensity={2} color="#06b6d4" />
+              <Hero3DScene />
+              <ContactShadows position={[0, -3.5, 0]} opacity={0.5} scale={15} blur={2.5} far={4.5} color="#6366f1" />
+              <Environment preset="city" />
+            </Canvas>
+          </Suspense>
         </div>
       </div>
     </section>

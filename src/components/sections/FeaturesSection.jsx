@@ -1,4 +1,4 @@
-import React, { Suspense, useRef, useState, useEffect } from 'react';
+import React, { Suspense, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { SectionHeading, Card } from '../ui/PremiumUI';
 
@@ -55,11 +55,6 @@ const features = [
 ];
 
 export default function FeaturesSection() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    setIsMobile(window.matchMedia('(max-width: 768px)').matches);
-  }, []);
 
   return (
     <section id="features" className="section-padding bg-surface">
@@ -70,14 +65,14 @@ export default function FeaturesSection() {
       
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         {features.map((f, i) => (
-          <FeatureCard key={i} feature={f} isMobile={isMobile} />
+          <FeatureCard key={i} feature={f} />
         ))}
       </div>
     </section>
   );
 }
 
-function FeatureCard({ feature, isMobile }) {
+function FeatureCard({ feature }) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -87,17 +82,13 @@ function FeatureCard({ feature, isMobile }) {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="w-20 h-20 mb-6 drop-shadow-xl relative flex justify-center items-center bg-background/50 rounded-2xl border border-white/5">
-        {!isMobile ? (
-          <Suspense fallback={null}>
-            <Canvas camera={{ position: [0, 0, 3.5], fov: 40 }} dpr={[1, 2]}>
-              <ambientLight intensity={0.8} />
-              <directionalLight position={[2, 2, 2]} intensity={1.5} />
-              <Mini3DIcon type={feature.id} isHovered={isHovered} />
-            </Canvas>
-          </Suspense>
-        ) : (
-          <div className="text-secondary font-bold text-2xl">{feature.title[0]}</div>
-        )}
+        <Suspense fallback={null}>
+          <Canvas camera={{ position: [0, 0, 3.5], fov: 40 }} dpr={[1, 1.5]}>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[2, 2, 2]} intensity={1.5} />
+            <Mini3DIcon type={feature.id} isHovered={isHovered} />
+          </Canvas>
+        </Suspense>
       </div>
       <h3 className="text-lg font-sora font-bold text-white mb-2">{feature.title}</h3>
       <p className="text-sm text-text-muted leading-relaxed">{feature.desc}</p>

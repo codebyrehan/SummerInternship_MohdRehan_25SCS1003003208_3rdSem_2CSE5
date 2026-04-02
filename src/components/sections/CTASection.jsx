@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { MeshDistortMaterial } from '@react-three/drei';
 import { Link } from 'react-router-dom';
@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 function BlobBg() {
   return (
     <mesh>
-      <sphereGeometry args={[2.5, 64, 64]} />
+      <sphereGeometry args={[2.5, 32, 32]} />
       <MeshDistortMaterial
         color="#6366f1"
         envMapIntensity={0.5}
@@ -23,27 +23,18 @@ function BlobBg() {
 }
 
 export default function CTASection() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    setIsMobile(window.matchMedia('(max-width: 768px)').matches);
-  }, []);
 
   return (
     <section className="relative py-[140px] overflow-hidden bg-surface flex flex-col items-center justify-center text-center px-6">
       {/* 3D Blob background */}
       <div className="absolute inset-0 z-0 opacity-15 pointer-events-none">
-        {!isMobile ? (
-          <Suspense fallback={null}>
-            <Canvas camera={{ position: [0, 0, 5], fov: 50 }} dpr={[1, 1.5]}>
-              <ambientLight intensity={1.5} />
-              <directionalLight position={[3, 3, 3]} intensity={2} color="#06b6d4" />
-              <BlobBg />
-            </Canvas>
-          </Suspense>
-        ) : (
-          <div className="w-full h-full bg-gradient-to-r from-primary/20 to-secondary/20 blur-3xl" />
-        )}
+        <Suspense fallback={null}>
+          <Canvas camera={{ position: [0, 0, 5], fov: 50 }} dpr={[1, 1.5]}>
+            <ambientLight intensity={1.5} />
+            <directionalLight position={[3, 3, 3]} intensity={2} color="#06b6d4" />
+            <BlobBg />
+          </Canvas>
+        </Suspense>
       </div>
 
       {/* Radial Glow */}
