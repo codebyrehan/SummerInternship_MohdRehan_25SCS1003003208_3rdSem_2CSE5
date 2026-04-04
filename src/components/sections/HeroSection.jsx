@@ -1,84 +1,107 @@
 import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { ContactShadows, MeshDistortMaterial, Float, Environment } from '@react-three/drei';
+import { Stars, Sparkles, ContactShadows, MeshDistortMaterial, Float, Environment } from '@react-three/drei';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
 import { Badge, Button } from '../ui/PremiumUI';
 
 function Hero3DScene() {
   const groupRef = useRef();
-  const lineRef1 = useRef();
-  const lineRef2 = useRef();
 
   // Mouse Parallax + floating animation
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
-    const targetX = (state.mouse.x * Math.PI) / 15;
-    const targetY = (state.mouse.y * Math.PI) / 15;
+    const targetX = (state.mouse.x * Math.PI) / 10;
+    const targetY = (state.mouse.y * Math.PI) / 10;
 
     if (groupRef.current) {
-      groupRef.current.rotation.y += (targetX - groupRef.current.rotation.y) * 0.1;
-      groupRef.current.rotation.x += (-targetY - groupRef.current.rotation.x) * 0.1;
-      groupRef.current.position.y = Math.sin(t * 0.6) * 0.15;
+      groupRef.current.rotation.y += (targetX - groupRef.current.rotation.y) * 0.05;
+      groupRef.current.rotation.x += (-targetY - groupRef.current.rotation.x) * 0.05;
+      groupRef.current.position.y = Math.sin(t * 0.5) * 0.2;
     }
   });
 
   return (
     <group ref={groupRef}>
-      {/* Resume Card — dark premium glass look */}
-      <Float speed={1.5} rotationIntensity={0.3} floatIntensity={0.8}>
-        <group position={[0, 0, 0.3]}>
-          {/* Card body - dark */}
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[2.6, 3.6, 0.08]} />
-            <meshStandardMaterial color="#0d0e1f" metalness={0.6} roughness={0.2} />
+      {/* Background Cosmic Field */}
+      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+      <Sparkles count={50} scale={10} size={1} speed={0.4} color="#6366f1" />
+      <Sparkles count={30} scale={10} size={1.5} speed={0.6} color="#06b6d4" />
+
+      {/* Main Career Galaxy Nebula (Central Glow) */}
+      <mesh position={[0, 0, -2]}>
+        <sphereGeometry args={[2.5, 32, 32]} />
+        <MeshDistortMaterial
+          color="#1e224f"
+          emissive="#6366f1"
+          emissiveIntensity={0.5}
+          distort={0.6}
+          speed={2}
+          roughness={0}
+        />
+      </mesh>
+
+      {/* Floating Resume Card — dark premium glass look */}
+      <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
+        <group position={[0, 0, 1]}>
+          {/* Card body - dark metallic glass */}
+          <mesh castShadow>
+            <boxGeometry args={[2.8, 3.8, 0.1]} />
+            <meshStandardMaterial 
+              color="#05060f" 
+              metalness={0.9} 
+              roughness={0.1} 
+              transparent 
+              opacity={0.9} 
+            />
           </mesh>
-          {/* Glowing indigo border frame */}
-          <mesh position={[0, 0, 0.05]}>
-            <boxGeometry args={[2.62, 3.62, 0.01]} />
-            <meshStandardMaterial color="#6366f1" emissive="#6366f1" emissiveIntensity={0.8} wireframe />
+          
+          {/* Neon Border */}
+          <mesh position={[0, 0, 0.06]}>
+            <boxGeometry args={[2.82, 3.82, 0.01]} />
+            <meshStandardMaterial color="#6366f1" emissive="#6366f1" emissiveIntensity={2} wireframe />
           </mesh>
-          {/* Resume header line - cyan */}
-          <mesh position={[0, 1.3, 0.06]}>
-            <boxGeometry args={[1.8, 0.06, 0.01]} />
-            <meshStandardMaterial color="#06b6d4" emissive="#06b6d4" emissiveIntensity={1.5} />
+
+          {/* AI Signature Node (Small Glowing Cube) */}
+          <mesh position={[0, 1.4, 0.08]}>
+            <boxGeometry args={[1.5, 0.1, 0.01]} />
+            <meshStandardMaterial color="#06b6d4" emissive="#06b6d4" emissiveIntensity={3} />
           </mesh>
-          {/* Resume content lines */}
-          {[-0.2, -0.5, -0.8, -1.1].map((y, i) => (
-            <mesh key={i} position={[i % 2 === 0 ? -0.2 : 0.1, y, 0.06]}>
-              <boxGeometry args={[i % 2 === 0 ? 1.4 : 1.0, 0.04, 0.01]} />
-              <meshStandardMaterial color="#6366f1" emissive="#6366f1" emissiveIntensity={0.5} transparent opacity={0.6} />
+
+          {/* Content Lines (Glow) */}
+          {[-0.2, -0.6, -1.0, -1.4].map((y, i) => (
+            <mesh key={i} position={[i % 2 === 0 ? -0.4 : 0.2, y, 0.08]}>
+              <boxGeometry args={[i % 2 === 0 ? 1.6 : 1.2, 0.05, 0.01]} />
+              <meshStandardMaterial 
+                color="#6366f1" 
+                emissive="#6366f1" 
+                emissiveIntensity={1.5} 
+                transparent 
+                opacity={0.7} 
+              />
             </mesh>
           ))}
         </group>
       </Float>
 
-      {/* Abstract Glowing Sphere Behind */}
-      <mesh position={[0, 0, -1]}>
-        <sphereGeometry args={[1.5, 32, 32]} />
-        <MeshDistortMaterial
-          color="#6366f1"
-          envMapIntensity={1}
-          clearcoat={1}
-          clearcoatRoughness={0.1}
-          metalness={0.7}
-          roughness={0.2}
-          distort={0.3}
-          speed={1.5}
-        />
-      </mesh>
-
-      {/* Orbiting Particles */}
-      <Float speed={3} rotationIntensity={2} floatIntensity={2}>
-        <mesh position={[2, 1.5, 1]}>
-          <icosahedronGeometry args={[0.3, 0]} />
-          <meshStandardMaterial color="#06b6d4" metalness={0.5} roughness={0.1} wireframe />
-        </mesh>
-        <mesh position={[-2, -1, 1.5]}>
-          <octahedronGeometry args={[0.2, 0]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.5} roughness={0.1} />
-        </mesh>
-      </Float>
+      {/* Orbiting Career Nodes */}
+      {[...Array(4)].map((_, i) => (
+        <Float key={i} speed={2 + i} rotationIntensity={1} floatIntensity={1}>
+          <mesh position={[
+            Math.cos(i * Math.PI / 2) * 4, 
+            Math.sin(i * Math.PI / 2) * 3, 
+            -1
+          ]}>
+            <icosahedronGeometry args={[0.3, 0]} />
+            <meshStandardMaterial 
+              color={i % 2 === 0 ? "#6366f1" : "#06b6d4"} 
+              emissive={i % 2 === 0 ? "#6366f1" : "#06b6d4"}
+              emissiveIntensity={2}
+              wireframe 
+            />
+          </mesh>
+        </Float>
+      ))}
     </group>
   );
 }
