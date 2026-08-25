@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence, useSpring, useMotionValue } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
@@ -673,9 +673,23 @@ function PortfolioTab() {
 
 // ── Main Dashboard ────────────────────────────────────────
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState('home');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'home';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const { logout } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['home', 'resumes', 'cover-letter', 'skill-gap', 'interview', 'portfolio'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId });
+  };
 
   const handleLogout = () => { logout(); navigate('/'); };
 
@@ -705,7 +719,7 @@ export default function Dashboard() {
 
         <nav className="flex-1 p-3 space-y-1">
           {TABS.map((t, i) => (
-            <motion.button key={t.id} onClick={() => setActiveTab(t.id)}
+            <motion.button key={t.id} onClick={() => handleTabChange(t.id)}
               initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 + i * 0.04 }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative ${activeTab === t.id ? 'text-white' : 'text-white/45 hover:text-white hover:bg-white/5'}`}
               whileHover={{ x: activeTab === t.id ? 0 : 4 }}>
@@ -732,7 +746,7 @@ export default function Dashboard() {
       {/* Mobile bottom nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/5 flex">
         {TABS.slice(0, 5).map(t => (
-          <motion.button key={t.id} onClick={() => setActiveTab(t.id)}
+          <motion.button key={t.id} onClick={() => handleTabChange(t.id)}
             className={`flex-1 flex flex-col items-center py-3 gap-1 text-xs transition-colors ${activeTab === t.id ? 'text-white' : 'text-white/35'}`}
             whileTap={{ scale: 0.9 }}>
             <t.icon className="w-4 h-4" style={activeTab === t.id ? { color: t.color } : {}} />

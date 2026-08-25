@@ -399,12 +399,12 @@ function LiveTemplateShowcase() {
 
 // ── Interactive Feature Cards Grid ──────────────────────────────
 const FEATURES = [
-  { icon: FileText, title: 'AI Resume Builder', desc: 'Gemini AI crafts ATS-optimized resumes with quantified impact bullets tailored to your target job roles.', color: '#8b5cf6', badge: 'Core' },
-  { icon: Mail, title: 'Cover Letter Studio', desc: 'Paste any job description and get a customized, high-converting cover letter in under 5 seconds.', color: '#3b82f6', badge: 'Instant' },
-  { icon: Target, title: 'Skill Gap Analyzer', desc: 'Evaluate your profile against job descriptions to discover missing keywords and learning recommendations.', color: '#10b981', badge: 'Analytics' },
-  { icon: Globe, title: 'Portfolio Generator', desc: 'Transform your projects into an attractive live developer web portfolio ready to share with recruiters.', color: '#f59e0b', badge: 'Live Showcase' },
-  { icon: Brain, title: 'AI Interview Coach', desc: 'Practice with tailored interview questions, STAR method model answers, and strategic insider tips.', color: '#ec4899', badge: 'Practice' },
-  { icon: TrendingUp, title: 'Career Acceleration', desc: 'Access comprehensive toolsets for internships, tech placements, and entry-level engineering roles.', color: '#06b6d4', badge: 'Growth' },
+  { icon: FileText, title: 'AI Resume Builder', desc: 'Gemini AI crafts ATS-optimized resumes with quantified impact bullets tailored to your target job roles.', color: '#8b5cf6', badge: 'Core', link: '/build' },
+  { icon: Mail, title: 'Cover Letter Studio', desc: 'Paste any job description and get a customized, high-converting cover letter in under 5 seconds.', color: '#3b82f6', badge: 'Instant', link: '/dashboard?tab=cover-letter' },
+  { icon: Target, title: 'Skill Gap Analyzer', desc: 'Evaluate your profile against job descriptions to discover missing keywords and learning recommendations.', color: '#10b981', badge: 'Analytics', link: '/dashboard?tab=skill-gap' },
+  { icon: Globe, title: 'Portfolio Generator', desc: 'Transform your projects into an attractive live developer web portfolio ready to share with recruiters.', color: '#f59e0b', badge: 'Live Showcase', link: '/dashboard?tab=portfolio' },
+  { icon: Brain, title: 'AI Interview Coach', desc: 'Practice with tailored interview questions, STAR method model answers, and strategic insider tips.', color: '#ec4899', badge: 'Practice', link: '/dashboard?tab=interview' },
+  { icon: TrendingUp, title: 'Career Acceleration', desc: 'Access comprehensive toolsets for internships, tech placements, and entry-level engineering roles.', color: '#06b6d4', badge: 'Growth', link: '/dashboard?tab=resumes' },
 ];
 
 export default function Landing() {
@@ -545,26 +545,28 @@ export default function Landing() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURES.map((f, i) => (
-            <SpotlightCard key={i} className="p-7 flex flex-col justify-between" color={f.color + '25'}>
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                    style={{ background: f.color + '20', border: `1px solid ${f.color}40` }}
-                  >
-                    <f.icon className="w-6 h-6" style={{ color: f.color }} />
+            <Link key={i} to={f.link} className="block h-full group">
+              <SpotlightCard className="p-7 flex flex-col justify-between h-full cursor-pointer hover:border-violet-500/40 transition-colors" color={f.color + '25'}>
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"
+                      style={{ background: f.color + '20', border: `1px solid ${f.color}40` }}
+                    >
+                      <f.icon className="w-6 h-6" style={{ color: f.color }} />
+                    </div>
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/60">
+                      {f.badge}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/60">
-                    {f.badge}
-                  </span>
+                  <h3 className="text-lg font-bold mb-2 group-hover:text-white transition-colors">{f.title}</h3>
+                  <p className="text-sm text-white/50 leading-relaxed">{f.desc}</p>
                 </div>
-                <h3 className="text-lg font-bold mb-2">{f.title}</h3>
-                <p className="text-sm text-white/50 leading-relaxed">{f.desc}</p>
-              </div>
-              <div className="pt-6 mt-4 border-t border-white/5 flex items-center gap-1.5 text-xs font-medium" style={{ color: f.color }}>
-                Explore feature <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </SpotlightCard>
+                <div className="pt-6 mt-4 border-t border-white/5 flex items-center gap-1.5 text-xs font-semibold group-hover:translate-x-1 transition-transform" style={{ color: f.color }}>
+                  Launch {f.title} <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </SpotlightCard>
+            </Link>
           ))}
         </div>
       </section>
