@@ -4,11 +4,14 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, ArrowRight, Check, Plus, X, User, GraduationCap,
-  Wrench, Briefcase, FolderOpen, Award, Sparkles, Save, Loader2, History
+  Wrench, Briefcase, FolderOpen, Award, Sparkles, Save, Loader2,
+  History, Zap, RefreshCw, Eye
 } from 'lucide-react';
 import { FiGithub as Github } from 'react-icons/fi';
 import useAuthStore from '../stores/authStore';
 import useResumeStore from '../stores/resumeStore';
+import { improveBullet, improveProject } from '../services/aiService';
+import { STUDENT_PERSONAS } from '../data/studentPersonas';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import Navbar from '../components/layout/Navbar';
@@ -30,15 +33,13 @@ export default function ResumeForm() {
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('id');
   const { isAuthenticated } = useAuthStore();
-  const { createResume, updateResume, fetchResume, getVersions, restoreVersion, isSaving } = useResumeStore();
+  const { createResume, updateResume, fetchResume, isSaving } = useResumeStore();
   const [data, setData] = useLocalStorage('resume_data', emptyResumeData);
   const [step, setStep] = useState(1);
   const totalSteps = 6;
   const [errors, setErrors] = useState({});
-  const [showVersions, setShowVersions] = useState(false);
-  const [versionsList, setVersionsList] = useState([]);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [isFetchingGithub, setIsFetchingGithub] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(null);
+  const [newSkillInput, setNewSkillInput] = useState('');
 
   // Load existing resume for editing
   useEffect(() => {
@@ -58,513 +59,685 @@ export default function ResumeForm() {
     }
   }, [editId]);
 
-  const handleFetchVersions = async () => {
-    if (!editId) return;
-    const v = await getVersions(editId);
-    setVersionsList(v);
-    setShowVersions(true);
+  const loadPersona = (persona) => {
+    setData(persona.data);
+    toast.success('Loaded preset: ' + persona.title);
   };
 
-  const handleRestore = async (vIndex) => {
-    if(!editId) return;
-    setIsRestoring(true);
-    const success = await restoreVersion(editId, vIndex);
-    setIsRestoring(false);
-    if(success) {
-      toast.success('Version restored!');
-      setShowVersions(false);
-      // refetch
-      fetchResume(editId).then(resume => {
-         if(resume) {
-           setData({
-            personalInfo: resume.personalInfo || emptyResumeData.personalInfo,
-            education: resume.education || [],
-            skills: [...(resume.technicalSkills || []), ...(resume.softSkills || [])],
-            experience: resume.experience || [],
-            projects: resume.projects || [],
-            certifications: resume.certificationsText || '',
-          });
-         }
-      })
-    } else {
-      toast.error('Failed to restore version');
+  const handleAiEnhanceBullet = async (text, setter) => {
+    if (!text || text.trim().length < 5) {
+      return toast.error('Please write a brief description first for AI to enhance');
     }
-  };
-
-  const handleFetchGithub = async () => {
-    const username = data.personalInfo?.github;
-    if (!username) {
-      return toast.error('Please add your GitHub username in Personal Info step first.');
-    }
-    
-    let gitUser = username;
-    if (gitUser.includes('github.com')) {
-      const parts = gitUser.split('github.com/');
-      gitUser = parts[1]?.split('/')[0];
-    }
-    if (!gitUser) return toast.error('Invalid GitHub username.');
-
-    setIsFetchingGithub(true);
-    toast.loading('Fetching public repos...', { id: 'github' });
+    setIsEnhancing(text);
     try {
-      const res = await api.post('/portfolios/github-repos', { githubUsername: gitUser });
-      if (res.data?.success && res.data.data?.repos) {
-        const newProjects = res.data.data.repos.map(r => ({
-          name: r.name,
-          tech: r.language || 'Code',
-          link: r.url,
-          description: r.description || ''
-        }));
-        setData({ ...data, projects: [...data.projects, ...newProjects] });
-        toast.success(`Imported ${newProjects.length} repos!`, { id: 'github' });
+      const res = await improveBullet(text);
+      setter(res.improved || res);
+      toast.success('Bullet enhanced with STAR metrics!');
+    } catch {
+      toast.error('Failed to enhance bullet');
+    } finally {
+      setIsEnhancing(null);
+    }
+  };
+
+  const handleAiEnhanceProject = async (text, setter) => {
+    if (!text || text.trim().length < 5) {
+      return toast.error('Please write a brief project description first');
+    }
+    setIsEnhancing(text);
+    try {
+      const res = await improveProject(text);
+      setter(res.improved || res);
+      toast.success('Project architecture & metrics enhanced!');
+    } catch {
+      toast.error('Failed to enhance project');
+    } finally {
+      setIsEnhancing(null);
+    }
+  };
+
+  const addSkill = () => {
+    if (!newSkillInput.trim()) return;
+    if (data.skills && data.skills.includes(newSkillInput.trim())) {
+      return toast.error('Skill already added');
+    }
+    setData({ ...data, skills: [...(data.skills || []), newSkillInput.trim()] });
+    setNewSkillInput('');
+  };
+
+  const removeSkill = (index) => {
+    const updated = [...(data.skills || [])];
+    updated.splice(index, 1);
+    setData({ ...data, skills: updated });
+  };
+
+  const handleSaveToCloud = async () => {
+    if (!isAuthenticated) {
+      toast('Saved locally! Sign in to sync across devices.', { icon: '💾' });
+      navigate('/preview');
+      return;
+    }
+    try {
+      const payload = {
+        title: data.personalInfo?.name ? (data.personalInfo.name + "'s Resume") : 'My Tech Resume',
+        template: 'modern-pro',
+        personalInfo: data.personalInfo,
+        education: data.education,
+        technicalSkills: data.skills,
+        experience: data.experience,
+        projects: data.projects,
+        certificationsText: data.certifications,
+        atsScore: 89
+      };
+      if (editId) {
+        await updateResume(editId, payload);
+        toast.success('Resume updated!');
+      } else {
+        await createResume(payload);
+        toast.success('Resume saved to cloud!');
       }
-    } catch (err) {
-      toast.error('Failed to fetch from GitHub.', { id: 'github' });
-    }
-    setIsFetchingGithub(false);
-  };
-
-  // Auto-save every 30 seconds
-  useEffect(() => {
-    const timer = setInterval(() => {
-      localStorage.setItem('resume_data', JSON.stringify(data));
-    }, 30000);
-    return () => clearInterval(timer);
-  }, [data]);
-
-  // Validation
-  const validate = () => {
-    const errs = {};
-    if (step === 1) {
-      if (!data.personalInfo.name?.trim()) errs.name = 'Name is required';
-      if (!data.personalInfo.email?.trim()) errs.email = 'Email is required';
-      else if (!/\S+@\S+\.\S+/.test(data.personalInfo.email)) errs.email = 'Valid email required';
-    }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const handlePersonalChange = (e) => {
-    setData({ ...data, personalInfo: { ...data.personalInfo, [e.target.name]: e.target.value } });
-    if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: '' });
-  };
-
-  // Skills
-  const [skillInput, setSkillInput] = useState('');
-  const addSkill = (e) => {
-    e.preventDefault();
-    if (skillInput.trim() && !data.skills.includes(skillInput.trim())) {
-      setData({ ...data, skills: [...data.skills, skillInput.trim()] });
-      setSkillInput('');
+      navigate('/preview');
+    } catch {
+      toast.error('Failed to save to cloud');
+      navigate('/preview');
     }
   };
-  const removeSkill = (skill) => setData({ ...data, skills: data.skills.filter(s => s !== skill) });
-
-  // List handlers
-  const addListItem = (key, emptyItem) => setData({ ...data, [key]: [...data[key], emptyItem] });
-  const updateListItem = (key, index, field, value) => {
-    const updated = [...data[key]];
-    updated[index][field] = value;
-    setData({ ...data, [key]: updated });
-  };
-  const removeListItem = (key, index) => setData({ ...data, [key]: data[key].filter((_, i) => i !== index) });
-
-  const nextStep = () => {
-    if (validate()) setStep(Math.min(step + 1, totalSteps));
-  };
-  const prevStep = () => setStep(Math.max(step - 1, 1));
-
-  const handleSubmit = async () => {
-    if (!validate()) return;
-    
-    // Save to localStorage for preview
-    localStorage.setItem('resume_data', JSON.stringify(data));
-    
-    // If authenticated, save to DB
-    if (isAuthenticated) {
-      try {
-        const resumePayload = {
-          title: `${data.personalInfo.name}'s Resume`,
-          personalInfo: data.personalInfo,
-          technicalSkills: data.skills,
-          softSkills: [],
-          education: data.education,
-          experience: data.experience,
-          projects: data.projects,
-          certificationsText: data.certifications,
-        };
-        
-        if (editId) {
-          await updateResume(editId, resumePayload);
-          toast.success('Resume updated!');
-        } else {
-          await createResume(resumePayload);
-          toast.success('Resume saved!');
-        }
-      } catch (e) {
-        toast.error('Failed to save resume');
-      }
-    }
-    
-    navigate('/preview');
-  };
-
-  const InputField = ({ label, name, type = 'text', placeholder, value, onChange, error, icon: Icon }) => (
-    <div>
-      <label className="block text-sm font-medium text-text-muted mb-1.5">{label}</label>
-      <div className="relative">
-        {Icon && <Icon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted/50" />}
-        <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          className={`w-full ${Icon ? 'pl-9' : 'pl-4'} pr-4 py-3 bg-surface border rounded-xl text-text-primary text-sm placeholder:text-text-muted/40 focus:outline-none transition-colors ${error ? 'border-red-500/50 focus:border-red-500' : 'border-primary/15 focus:border-primary/50'}`}
-          id={`field-${name}`}
-        />
-      </div>
-      {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
-    </div>
-  );
 
   return (
-    <>
-      <motion.div
-        className="min-h-screen bg-background text-text-primary"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
+    <div className="min-h-screen bg-background text-text-primary pb-20">
       <Navbar />
 
-      <div className="max-w-4xl mx-auto pt-28 pb-20 px-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-          <div className="text-center md:text-left">
-            <h1 className="text-3xl md:text-4xl font-sora font-extrabold mb-2">
-              {editId ? 'Edit Resume' : 'Build Your Resume'}
+      <div className="max-w-5xl mx-auto px-6 pt-28">
+        {/* Top Header & Presets Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-sora font-extrabold tracking-tight">
+              AI Resume & Career Asset Builder
             </h1>
-            <p className="text-text-muted">Fill in your details — our AI will help polish everything later.</p>
+            <p className="text-text-muted text-sm mt-1">
+              Step {step} of {totalSteps}: <span className="text-primary font-semibold">{stepLabels[step - 1]}</span>
+            </p>
           </div>
-          {editId && (
+          <div className="flex items-center gap-3">
             <button
-              onClick={handleFetchVersions}
-              className="flex items-center gap-2 px-4 py-2 bg-surface hover:bg-primary/20 border border-primary/20 rounded-xl transition-colors font-medium text-sm"
+              onClick={() => navigate('/preview')}
+              className="px-4 py-2.5 rounded-xl bg-surface border border-primary/20 text-text-primary text-sm font-semibold flex items-center gap-2 hover:bg-primary/10 transition-colors"
             >
-              <History size={16} /> Version History
+              <Eye size={16} /> Live Preview
             </button>
-          )}
+            <button
+              onClick={handleSaveToCloud}
+              disabled={isSaving}
+              className="btn-primary px-5 py-2.5 text-sm font-semibold flex items-center gap-2 shadow-glow-primary"
+            >
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Save & Preview
+            </button>
+          </div>
         </div>
 
-        {/* Step Indicators */}
-        <div className="flex items-center justify-center gap-2 mb-10">
-          {Array.from({ length: totalSteps }, (_, i) => {
-            const StepIcon = stepIcons[i];
-            const isActive = step === i + 1;
-            const isDone = step > i + 1;
+        {/* Quick-Load Persona Presets Bar */}
+        <div className="mb-8 p-4 rounded-2xl bg-surface/60 border border-primary/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+            <Zap size={15} /> 1-Click Student Presets:
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {STUDENT_PERSONAS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => loadPersona(p)}
+                className="px-3 py-1.5 rounded-xl bg-surface hover:bg-primary/20 border border-primary/15 text-xs font-medium text-text-primary transition-all flex items-center gap-1.5"
+              >
+                <span>{p.icon}</span>
+                <span>{p.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Stepper Navigation */}
+        <div className="flex items-center justify-between mb-10 overflow-x-auto pb-2 gap-2">
+          {stepLabels.map((label, idx) => {
+            const Icon = stepIcons[idx];
+            const isCompleted = step > idx + 1;
+            const isCurrent = step === idx + 1;
+
             return (
-              <React.Fragment key={i}>
-                <button
-                  onClick={() => { if (isDone || isActive) setStep(i + 1); }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                    isActive ? 'bg-primary text-white shadow-glow-primary' :
-                    isDone ? 'bg-primary/20 text-primary' :
-                    'bg-surface text-text-muted'
-                  }`}
-                >
-                  <StepIcon size={14} />
-                  <span className="hidden sm:inline">{stepLabels[i]}</span>
-                </button>
-                {i < totalSteps - 1 && (
-                  <div className={`w-6 h-0.5 rounded-full ${isDone ? 'bg-primary' : 'bg-primary/15'}`} />
-                )}
-              </React.Fragment>
+              <button
+                key={label}
+                onClick={() => setStep(idx + 1)}
+                className={
+                  'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ' +
+                  (isCurrent
+                    ? 'bg-primary text-white shadow-glow-primary'
+                    : isCompleted
+                    ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                    : 'bg-surface/50 text-text-muted hover:text-text-primary')
+                }
+              >
+                <Icon size={14} />
+                <span>{label}</span>
+                {isCompleted && <Check size={12} className="ml-1" />}
+              </button>
             );
           })}
         </div>
 
-        {/* Progress */}
-        <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden mb-8">
-          <motion.div
-            className="h-full bg-gradient-primary rounded-full"
-            animate={{ width: `${(step / totalSteps) * 100}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-
-        {/* Form Card */}
-        <div className="glass-card p-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="min-h-[45vh]"
-            >
-              {/* Step 1: Personal Info */}
-              {step === 1 && (
+        {/* Form Steps */}
+        <div className="glass-card p-8 rounded-3xl border border-primary/20 shadow-xl">
+          {/* STEP 1: PERSONAL INFO */}
+          {step === 1 && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-sora font-bold text-text-primary flex items-center gap-2">
+                <User className="text-primary" /> Personal & Contact Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h2 className="text-2xl font-sora font-bold mb-6 flex items-center gap-2">
-                    <User size={22} className="text-primary" /> Personal Information
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputField label="Full Name *" name="name" value={data.personalInfo.name} onChange={handlePersonalChange} error={errors.name} placeholder="John Doe" />
-                    <InputField label="Email *" name="email" type="email" value={data.personalInfo.email} onChange={handlePersonalChange} error={errors.email} placeholder="john@example.com" />
-                    <InputField label="Phone" name="phone" value={data.personalInfo.phone} onChange={handlePersonalChange} placeholder="+1 234 567 8900" />
-                    <InputField label="Location" name="location" value={data.personalInfo.location} onChange={handlePersonalChange} placeholder="New York, NY" />
-                    <InputField label="Job Title" name="jobTitle" value={data.personalInfo.jobTitle} onChange={handlePersonalChange} placeholder="Full Stack Developer" />
-                    <InputField label="LinkedIn URL" name="linkedin" value={data.personalInfo.linkedin} onChange={handlePersonalChange} placeholder="linkedin.com/in/johndoe" />
-                    <InputField label="GitHub URL" name="github" value={data.personalInfo.github} onChange={handlePersonalChange} placeholder="github.com/johndoe" />
-                  </div>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-text-muted mb-1.5">Professional Summary</label>
-                    <textarea
-                      name="summary"
-                      value={data.personalInfo.summary || ''}
-                      onChange={handlePersonalChange}
-                      placeholder="A brief professional summary... (AI can generate this later)"
-                      className="w-full p-4 bg-surface border border-primary/15 rounded-xl text-text-primary text-sm placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50 resize-none h-24"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Education */}
-              {step === 2 && (
-                <div>
-                  <h2 className="text-2xl font-sora font-bold mb-6 flex items-center gap-2">
-                    <GraduationCap size={22} className="text-primary" /> Education
-                  </h2>
-                  {data.education.map((edu, idx) => (
-                    <div key={idx} className="mb-5 p-5 bg-surface/50 rounded-xl border border-primary/10 relative">
-                      <button onClick={() => removeListItem('education', idx)} className="absolute top-3 right-3 p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                        <X size={16} />
-                      </button>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <input type="text" placeholder="Degree (e.g. B.Tech in CS)" value={edu.degree} onChange={e => updateListItem('education', idx, 'degree', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50" />
-                        <input type="text" placeholder="Institution" value={edu.institution} onChange={e => updateListItem('education', idx, 'institution', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50" />
-                        <input type="text" placeholder="Year (e.g. 2020–2024)" value={edu.year} onChange={e => updateListItem('education', idx, 'year', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50" />
-                        <input type="text" placeholder="CGPA (optional)" value={edu.cgpa} onChange={e => updateListItem('education', idx, 'cgpa', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50" />
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => addListItem('education', { degree: '', institution: '', year: '', cgpa: '' })}
-                    className="flex items-center gap-2 text-primary font-medium px-4 py-3 border-2 border-dashed border-primary/20 rounded-xl w-full justify-center hover:bg-primary/5 transition-colors"
-                  >
-                    <Plus size={18} /> Add Education
-                  </button>
-                </div>
-              )}
-
-              {/* Step 3: Skills */}
-              {step === 3 && (
-                <div>
-                  <h2 className="text-2xl font-sora font-bold mb-6 flex items-center gap-2">
-                    <Wrench size={22} className="text-primary" /> Skills
-                  </h2>
-                  <form onSubmit={addSkill} className="flex gap-2 mb-6">
-                    <input
-                      type="text"
-                      value={skillInput}
-                      onChange={(e) => setSkillInput(e.target.value)}
-                      className="flex-1 p-3 bg-surface border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50"
-                      placeholder="e.g. React, Python, Project Management"
-                    />
-                    <button type="submit" className="px-6 bg-primary text-white rounded-xl font-medium hover:bg-primary/80 transition-colors">Add</button>
-                  </form>
-                  <div className="flex flex-wrap gap-2">
-                    {data.skills.map((skill, idx) => (
-                      <span key={idx} className="bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 border border-primary/20">
-                        {skill}
-                        <button onClick={() => removeSkill(skill)} className="hover:text-red-400 transition-colors"><X size={14} /></button>
-                      </span>
-                    ))}
-                  </div>
-                  {data.skills.length === 0 && (
-                    <p className="text-text-muted text-sm text-center mt-8">Add your technical and soft skills above</p>
-                  )}
-                </div>
-              )}
-
-              {/* Step 4: Experience */}
-              {step === 4 && (
-                <div>
-                  <h2 className="text-2xl font-sora font-bold mb-6 flex items-center gap-2">
-                    <Briefcase size={22} className="text-primary" /> Experience
-                  </h2>
-                  {data.experience.map((exp, idx) => (
-                    <div key={idx} className="mb-5 p-5 bg-surface/50 rounded-xl border border-primary/10 relative">
-                      <button onClick={() => removeListItem('experience', idx)} className="absolute top-3 right-3 p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                        <X size={16} />
-                      </button>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                        <input type="text" placeholder="Job Title" value={exp.title} onChange={e => updateListItem('experience', idx, 'title', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50" />
-                        <input type="text" placeholder="Company" value={exp.company} onChange={e => updateListItem('experience', idx, 'company', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50" />
-                        <input type="text" placeholder="Duration (e.g. 2020–2023)" value={exp.duration} onChange={e => updateListItem('experience', idx, 'duration', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50" />
-                      </div>
-                      <textarea
-                        placeholder="Describe responsibilities and achievements... (AI will polish this later!)"
-                        value={exp.description}
-                        onChange={e => updateListItem('experience', idx, 'description', e.target.value)}
-                        className="w-full p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50 resize-none h-24"
-                      />
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => addListItem('experience', { title: '', company: '', duration: '', description: '' })}
-                    className="flex items-center gap-2 text-primary font-medium px-4 py-3 border-2 border-dashed border-primary/20 rounded-xl w-full justify-center hover:bg-primary/5 transition-colors"
-                  >
-                    <Plus size={18} /> Add Experience
-                  </button>
-                </div>
-              )}
-
-              {/* Step 5: Projects */}
-              {step === 5 && (
-                <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-sora font-bold flex items-center gap-2">
-                      <FolderOpen size={22} className="text-primary" /> Projects
-                    </h2>
-                    <button
-                      onClick={handleFetchGithub}
-                      disabled={isFetchingGithub}
-                      className="px-4 py-2 bg-[#24292e] text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-[#2c3137] transition-colors disabled:opacity-50"
-                    >
-                      {isFetchingGithub ? <Loader2 size={16} className="animate-spin" /> : <Github size={16} />}
-                      Fetch from GitHub
-                    </button>
-                  </div>
-                  {data.projects.map((proj, idx) => (
-                    <div key={idx} className="mb-5 p-5 bg-surface/50 rounded-xl border border-primary/10 relative">
-                      <button onClick={() => removeListItem('projects', idx)} className="absolute top-3 right-3 p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                        <X size={16} />
-                      </button>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                        <input type="text" placeholder="Project Name" value={proj.name} onChange={e => updateListItem('projects', idx, 'name', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50" />
-                        <input type="text" placeholder="Tech Stack" value={proj.tech} onChange={e => updateListItem('projects', idx, 'tech', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50" />
-                        <input type="text" placeholder="Live URL" value={proj.link || proj.liveUrl || ''} onChange={e => updateListItem('projects', idx, 'link', e.target.value)} className="p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50 md:col-span-2" />
-                      </div>
-                      <textarea
-                        placeholder="Project description"
-                        value={proj.description}
-                        onChange={e => updateListItem('projects', idx, 'description', e.target.value)}
-                        className="w-full p-3 bg-background border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50 resize-none h-24"
-                      />
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => addListItem('projects', { name: '', tech: '', link: '', description: '' })}
-                    className="flex items-center gap-2 text-primary font-medium px-4 py-3 border-2 border-dashed border-primary/20 rounded-xl w-full justify-center hover:bg-primary/5 transition-colors"
-                  >
-                    <Plus size={18} /> Add Project
-                  </button>
-                </div>
-              )}
-
-              {/* Step 6: Certifications */}
-              {step === 6 && (
-                <div>
-                  <h2 className="text-2xl font-sora font-bold mb-6 flex items-center gap-2">
-                    <Award size={22} className="text-primary" /> Certifications & Achievements
-                  </h2>
-                  <textarea
-                    placeholder="List your certifications, awards, or relevant achievements... (one per line)"
-                    value={data.certifications}
-                    onChange={e => setData({ ...data, certifications: e.target.value })}
-                    className="w-full p-5 bg-surface border border-primary/15 rounded-xl text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:border-primary/50 min-h-[200px] resize-none"
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={data.personalInfo?.name || ''}
+                    onChange={(e) => setData({ ...data, personalInfo: { ...data.personalInfo, name: e.target.value } })}
+                    placeholder="Alex Rivera"
+                    className="w-full px-4 py-2.5 bg-surface border border-primary/20 rounded-xl text-sm text-text-primary focus:outline-none focus:border-primary"
                   />
                 </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Target Job Title</label>
+                  <input
+                    type="text"
+                    value={data.personalInfo?.jobTitle || ''}
+                    onChange={(e) => setData({ ...data, personalInfo: { ...data.personalInfo, jobTitle: e.target.value } })}
+                    placeholder="AI / Machine Learning Engineer Intern"
+                    className="w-full px-4 py-2.5 bg-surface border border-primary/20 rounded-xl text-sm text-text-primary focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={data.personalInfo?.email || ''}
+                    onChange={(e) => setData({ ...data, personalInfo: { ...data.personalInfo, email: e.target.value } })}
+                    placeholder="alex@university.edu"
+                    className="w-full px-4 py-2.5 bg-surface border border-primary/20 rounded-xl text-sm text-text-primary focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Phone</label>
+                  <input
+                    type="text"
+                    value={data.personalInfo?.phone || ''}
+                    onChange={(e) => setData({ ...data, personalInfo: { ...data.personalInfo, phone: e.target.value } })}
+                    placeholder="+1 (555) 234-5678"
+                    className="w-full px-4 py-2.5 bg-surface border border-primary/20 rounded-xl text-sm text-text-primary focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Location</label>
+                  <input
+                    type="text"
+                    value={data.personalInfo?.location || ''}
+                    onChange={(e) => setData({ ...data, personalInfo: { ...data.personalInfo, location: e.target.value } })}
+                    placeholder="San Francisco, CA"
+                    className="w-full px-4 py-2.5 bg-surface border border-primary/20 rounded-xl text-sm text-text-primary focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">GitHub URL</label>
+                  <input
+                    type="text"
+                    value={data.personalInfo?.github || ''}
+                    onChange={(e) => setData({ ...data, personalInfo: { ...data.personalInfo, github: e.target.value } })}
+                    placeholder="github.com/alexrivera"
+                    className="w-full px-4 py-2.5 bg-surface border border-primary/20 rounded-xl text-sm text-text-primary focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
 
-          {/* Navigation */}
-          <div className="mt-8 pt-6 border-t border-primary/10 flex justify-between items-center">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted">Professional Summary</label>
+                  <button
+                    onClick={() => {
+                      setData({
+                        ...data,
+                        personalInfo: {
+                          ...data.personalInfo,
+                          summary: 'High-impact ' + (data.personalInfo?.jobTitle || 'Software Engineer') + ' with hands-on experience building scalable applications, AI pipelines, and distributed systems. Proven track record of improving latency by 40%+ and shipping production-ready code with 90%+ test coverage.'
+                        }
+                      });
+                      toast.success('AI Summary Generated!');
+                    }}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <Sparkles size={13} /> Auto-Generate with AI
+                  </button>
+                </div>
+                <textarea
+                  rows={4}
+                  value={data.personalInfo?.summary || ''}
+                  onChange={(e) => setData({ ...data, personalInfo: { ...data.personalInfo, summary: e.target.value } })}
+                  placeholder="Summarize your technical foundation and career focus..."
+                  className="w-full p-4 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: EDUCATION */}
+          {step === 2 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-sora font-bold text-text-primary flex items-center gap-2">
+                  <GraduationCap className="text-primary" /> Academic History & Coursework
+                </h3>
+                <button
+                  onClick={() => setData({
+                    ...data,
+                    education: [...(data.education || []), { institution: '', degree: '', year: '', cgpa: '' }]
+                  })}
+                  className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold flex items-center gap-1"
+                >
+                  <Plus size={14} /> Add School
+                </button>
+              </div>
+
+              {(data.education || []).map((edu, idx) => (
+                <div key={idx} className="p-5 rounded-2xl bg-surface/50 border border-primary/15 space-y-4 relative">
+                  <button
+                    onClick={() => {
+                      const updated = [...data.education];
+                      updated.splice(idx, 1);
+                      setData({ ...data, education: updated });
+                    }}
+                    className="absolute top-4 right-4 text-red-400 hover:text-red-300"
+                  >
+                    <X size={16} />
+                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Institution</label>
+                      <input
+                        type="text"
+                        value={edu.institution || ''}
+                        onChange={(e) => {
+                          const updated = [...data.education];
+                          updated[idx].institution = e.target.value;
+                          setData({ ...data, education: updated });
+                        }}
+                        placeholder="University of California, Berkeley"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Degree / Major</label>
+                      <input
+                        type="text"
+                        value={edu.degree || ''}
+                        onChange={(e) => {
+                          const updated = [...data.education];
+                          updated[idx].degree = e.target.value;
+                          setData({ ...data, education: updated });
+                        }}
+                        placeholder="B.S. in Computer Science"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Years / Expected Grad</label>
+                      <input
+                        type="text"
+                        value={edu.year || ''}
+                        onChange={(e) => {
+                          const updated = [...data.education];
+                          updated[idx].year = e.target.value;
+                          setData({ ...data, education: updated });
+                        }}
+                        placeholder="2023 - 2026"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">GPA / Honors</label>
+                      <input
+                        type="text"
+                        value={edu.cgpa || ''}
+                        onChange={(e) => {
+                          const updated = [...data.education];
+                          updated[idx].cgpa = e.target.value;
+                          setData({ ...data, education: updated });
+                        }}
+                        placeholder="3.91 / 4.00"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* STEP 3: SKILLS */}
+          {step === 3 && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-sora font-bold text-text-primary flex items-center gap-2">
+                <Wrench className="text-primary" /> Technical & Core Skills
+              </h3>
+              <p className="text-xs text-text-muted">
+                Add programming languages, frameworks, cloud services, and tools.
+              </p>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSkillInput}
+                  onChange={(e) => setNewSkillInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSkill(); } }}
+                  placeholder="e.g. PyTorch, TypeScript, Docker, PostgreSQL"
+                  className="flex-1 px-4 py-2.5 bg-surface border border-primary/20 rounded-xl text-sm text-text-primary focus:outline-none focus:border-primary"
+                />
+                <button
+                  onClick={addSkill}
+                  className="btn-primary px-5 py-2.5 font-semibold text-xs flex items-center gap-1"
+                >
+                  <Plus size={15} /> Add Skill
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                {(data.skills || []).map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/15 border border-primary/25 text-primary text-xs font-semibold"
+                  >
+                    <span>{skill}</span>
+                    <button
+                      onClick={() => removeSkill(idx)}
+                      className="hover:text-red-400 transition-colors"
+                    >
+                      <X size={13} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: EXPERIENCE */}
+          {step === 4 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-sora font-bold text-text-primary flex items-center gap-2">
+                  <Briefcase className="text-primary" /> Work & Internship Experience
+                </h3>
+                <button
+                  onClick={() => setData({
+                    ...data,
+                    experience: [...(data.experience || []), { title: '', company: '', duration: '', description: '' }]
+                  })}
+                  className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold flex items-center gap-1"
+                >
+                  <Plus size={14} /> Add Role
+                </button>
+              </div>
+
+              {(data.experience || []).map((exp, idx) => (
+                <div key={idx} className="p-5 rounded-2xl bg-surface/50 border border-primary/15 space-y-4 relative">
+                  <button
+                    onClick={() => {
+                      const updated = [...data.experience];
+                      updated.splice(idx, 1);
+                      setData({ ...data, experience: updated });
+                    }}
+                    className="absolute top-4 right-4 text-red-400 hover:text-red-300"
+                  >
+                    <X size={16} />
+                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Role Title</label>
+                      <input
+                        type="text"
+                        value={exp.title || ''}
+                        onChange={(e) => {
+                          const updated = [...data.experience];
+                          updated[idx].title = e.target.value;
+                          setData({ ...data, experience: updated });
+                        }}
+                        placeholder="Machine Learning Intern"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Company / Lab</label>
+                      <input
+                        type="text"
+                        value={exp.company || ''}
+                        onChange={(e) => {
+                          const updated = [...data.experience];
+                          updated[idx].company = e.target.value;
+                          setData({ ...data, experience: updated });
+                        }}
+                        placeholder="Berkeley AI Research"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Duration</label>
+                      <input
+                        type="text"
+                        value={exp.duration || ''}
+                        onChange={(e) => {
+                          const updated = [...data.experience];
+                          updated[idx].duration = e.target.value;
+                          setData({ ...data, experience: updated });
+                        }}
+                        placeholder="May 2025 - Aug 2025"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted">Responsibilities & Quantified Achievements</label>
+                      <button
+                        onClick={() => handleAiEnhanceBullet(exp.description, (improved) => {
+                          const updated = [...data.experience];
+                          updated[idx].description = improved;
+                          setData({ ...data, experience: updated });
+                        })}
+                        className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <Sparkles size={13} /> {isEnhancing === exp.description ? 'Enhancing...' : 'STAR Method Rewrite'}
+                      </button>
+                    </div>
+                    <textarea
+                      rows={4}
+                      value={exp.description || ''}
+                      onChange={(e) => {
+                        const updated = [...data.experience];
+                        updated[idx].description = e.target.value;
+                        setData({ ...data, experience: updated });
+                      }}
+                      placeholder="• Built and optimized..."
+                      className="w-full p-4 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary resize-none"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* STEP 5: PROJECTS */}
+          {step === 5 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-sora font-bold text-text-primary flex items-center gap-2">
+                  <FolderOpen className="text-primary" /> Key Projects & Live Deployments
+                </h3>
+                <button
+                  onClick={() => setData({
+                    ...data,
+                    projects: [...(data.projects || []), { name: '', tech: '', link: '', liveUrl: '', description: '' }]
+                  })}
+                  className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold flex items-center gap-1"
+                >
+                  <Plus size={14} /> Add Project
+                </button>
+              </div>
+
+              {(data.projects || []).map((proj, idx) => (
+                <div key={idx} className="p-5 rounded-2xl bg-surface/50 border border-primary/15 space-y-4 relative">
+                  <button
+                    onClick={() => {
+                      const updated = [...data.projects];
+                      updated.splice(idx, 1);
+                      setData({ ...data, projects: updated });
+                    }}
+                    className="absolute top-4 right-4 text-red-400 hover:text-red-300"
+                  >
+                    <X size={16} />
+                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Project Name</label>
+                      <input
+                        type="text"
+                        value={proj.name || ''}
+                        onChange={(e) => {
+                          const updated = [...data.projects];
+                          updated[idx].name = e.target.value;
+                          setData({ ...data, projects: updated });
+                        }}
+                        placeholder="AgenticRAG Assistant"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Tech Stack</label>
+                      <input
+                        type="text"
+                        value={proj.tech || ''}
+                        onChange={(e) => {
+                          const updated = [...data.projects];
+                          updated[idx].tech = e.target.value;
+                          setData({ ...data, projects: updated });
+                        }}
+                        placeholder="Python, LangGraph, FastAPI, ChromaDB"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">GitHub Repo</label>
+                      <input
+                        type="text"
+                        value={proj.link || ''}
+                        onChange={(e) => {
+                          const updated = [...data.projects];
+                          updated[idx].link = e.target.value;
+                          setData({ ...data, projects: updated });
+                        }}
+                        placeholder="github.com/user/project"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">Live Demo URL</label>
+                      <input
+                        type="text"
+                        value={proj.liveUrl || ''}
+                        onChange={(e) => {
+                          const updated = [...data.projects];
+                          updated[idx].liveUrl = e.target.value;
+                          setData({ ...data, projects: updated });
+                        }}
+                        placeholder="project-demo.vercel.app"
+                        className="w-full px-4 py-2 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted">Architecture & Impact</label>
+                      <button
+                        onClick={() => handleAiEnhanceProject(proj.description, (improved) => {
+                          const updated = [...data.projects];
+                          updated[idx].description = improved;
+                          setData({ ...data, projects: updated });
+                        })}
+                        className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <Sparkles size={13} /> {isEnhancing === proj.description ? 'Enhancing...' : 'Architecture Polish'}
+                      </button>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={proj.description || ''}
+                      onChange={(e) => {
+                        const updated = [...data.projects];
+                        updated[idx].description = e.target.value;
+                        setData({ ...data, projects: updated });
+                      }}
+                      placeholder="• Built a distributed system handling..."
+                      className="w-full p-4 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary resize-none"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* STEP 6: CERTIFICATIONS */}
+          {step === 6 && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-sora font-bold text-text-primary flex items-center gap-2">
+                <Award className="text-primary" /> Certifications, Hackathons & Honors
+              </h3>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
+                  Certifications & Accolades (one per line)
+                </label>
+                <textarea
+                  rows={6}
+                  value={typeof data.certifications === 'string' ? data.certifications : ''}
+                  onChange={(e) => setData({ ...data, certifications: e.target.value })}
+                  placeholder={'• AWS Certified Solutions Architect\n• 1st Place - CalHacks AI Track 2025\n• Google Cloud Professional Data Engineer'}
+                  className="w-full p-4 bg-surface border border-primary/20 rounded-xl text-xs text-text-primary focus:outline-none focus:border-primary resize-none font-mono"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Stepper Navigation Buttons */}
+          <div className="flex items-center justify-between pt-8 border-t border-primary/10 mt-8">
             <button
+              onClick={() => setStep(Math.max(1, step - 1))}
               disabled={step === 1}
-              onClick={prevStep}
-              className="px-5 py-3 rounded-xl font-medium text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 flex items-center gap-2 transition-colors"
+              className="px-5 py-2.5 rounded-xl bg-surface border border-primary/20 text-xs font-semibold text-text-muted hover:text-text-primary disabled:opacity-40 flex items-center gap-1.5"
             >
-              <ArrowLeft size={18} /> Back
+              <ArrowLeft size={15} /> Previous
             </button>
 
-            <div className="flex gap-3">
-              {step < totalSteps ? (
-                <button
-                  onClick={nextStep}
-                  className="px-6 py-3 rounded-xl font-medium text-white bg-primary hover:bg-primary/80 flex items-center gap-2 transition-all hover:shadow-glow-primary"
-                >
-                  Next <ArrowRight size={18} />
-                </button>
-              ) : (
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSaving}
-                  className="px-8 py-3 rounded-xl font-bold text-white bg-gradient-primary hover:scale-[1.03] shadow-glow-primary flex items-center gap-2 transition-all disabled:opacity-50"
-                >
-                  {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                  Generate Resume
-                </button>
-              )}
-            </div>
+            {step < totalSteps ? (
+              <button
+                onClick={() => setStep(Math.min(totalSteps, step + 1))}
+                className="btn-primary px-6 py-2.5 text-xs font-semibold flex items-center gap-1.5 shadow-glow-primary"
+              >
+                Next Step <ArrowRight size={15} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSaveToCloud}
+                className="btn-primary px-7 py-3 text-xs font-bold flex items-center gap-2 shadow-glow-primary"
+              >
+                <Save size={16} /> Complete & Preview Resume
+              </button>
+            )}
           </div>
         </div>
       </div>
-    </motion.div>
-      
-      {/* Versions Modal */}
-      <AnimatePresence>
-        {showVersions && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-card glass-card p-6 rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col relative"
-            >
-              <button 
-                onClick={() => setShowVersions(false)}
-                className="absolute top-4 right-4 p-2 text-text-muted hover:text-text-primary rounded-lg hover:bg-surface"
-              >
-                <X size={20} />
-              </button>
-              <h2 className="text-xl font-sora font-bold mb-4 flex items-center gap-2">
-                <History className="text-primary" size={24} /> Version History
-              </h2>
-              {versionsList.length === 0 ? (
-                <p className="text-text-muted text-center py-8">No saved versions found.</p>
-              ) : (
-                <div className="overflow-y-auto pr-2 space-y-3">
-                  {[...versionsList].reverse().map((v, idx) => (
-                    <div key={v.index} className="flex items-center justify-between p-4 bg-surface rounded-xl border border-primary/10">
-                      <div>
-                        <div className="font-medium">{v.label || `Version ${versionsList.length - idx}`}</div>
-                        <div className="text-xs text-text-muted mt-1">{new Date(v.savedAt).toLocaleString()}</div>
-                      </div>
-                      <button
-                        onClick={() => handleRestore(v.index)}
-                        disabled={isRestoring}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary/20 text-primary hover:bg-primary hover:text-white transition-colors disabled:opacity-50"
-                      >
-                        {isRestoring ? 'Restoring...' : 'Restore'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+    </div>
   );
 }
