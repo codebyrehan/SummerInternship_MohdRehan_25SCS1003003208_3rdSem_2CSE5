@@ -2,46 +2,34 @@ import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
-import Lenis from 'lenis';
 import useAuthStore from './stores/authStore';
 
 // Pages
 import Landing from './pages/Landing';
 const ResumeForm = lazy(() => import('./pages/ResumeForm'));
-const Preview = lazy(() => import('./pages/Preview'));
-const Portfolio = lazy(() => import('./pages/Portfolio'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
 
-// Loading fallback
+// Lazy-load optional pages with fallback
+let Preview, Portfolio, ForgotPassword;
+try {
+  Preview = lazy(() => import('./pages/Preview').catch(() => ({ default: () => null })));
+  Portfolio = lazy(() => import('./pages/Portfolio').catch(() => ({ default: () => null })));
+  ForgotPassword = lazy(() => import('./pages/ForgotPassword').catch(() => ({ default: () => null })));
+} catch {
+  const Null = () => null;
+  Preview = Portfolio = ForgotPassword = Null;
+}
+
 const PageLoader = () => (
-  <div className="min-h-screen bg-background flex items-center justify-center">
+  <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
     <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-      <span className="text-text-muted font-medium">Loading...</span>
+      <div className="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+      <span className="text-white/50 font-medium text-sm">Loading...</span>
     </div>
   </div>
 );
-
-// Protected Route wrapper
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuthStore();
-  
-  if (isLoading) return <PageLoader />;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return children;
-}
-
-// Guest Route (redirect to dashboard if logged in)
-function GuestRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuthStore();
-  
-  if (isLoading) return <PageLoader />;
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
-  return children;
-}
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -51,13 +39,12 @@ function AnimatedRoutes() {
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Landing />} />
           <Route path="/build" element={<ResumeForm />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/preview" element={<Preview />} />
           <Route path="/portfolio/:username" element={<Portfolio />} />
-          <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-          <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
-          <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -69,25 +56,7 @@ function App() {
   const initialize = useAuthStore(state => state.initialize);
 
   useEffect(() => {
-    initialize();
-  }, []);
-
-  useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.4,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smooth: true,
-      smoothTouch: false,
-      touchMultiplier: 2,
-    });
-
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-    requestAnimationFrame(raf);
-
-    return () => lenis.destroy();
+    try { initialize(); } catch {}
   }, []);
 
   return (
@@ -99,7 +68,7 @@ function App() {
           style: {
             background: '#12132a',
             color: '#f1f5f9',
-            border: '1px solid rgba(99,102,241,0.2)',
+            border: '1px solid rgba(139,92,246,0.25)',
             borderRadius: '12px',
             fontSize: '14px',
           },

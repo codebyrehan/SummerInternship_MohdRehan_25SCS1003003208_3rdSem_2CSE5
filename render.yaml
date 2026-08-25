@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install --include=dev && node scripts/build.cjs
+    buildCommand: npm install --include=dev && npm run build && cd server && npm install
     startCommand: node server/server.js
     healthCheckPath: /api/health
     envVars:
@@ -12,11 +12,9 @@ services:
         value: production
       - key: PORT
         value: 10000
-      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-        value: "true"
-      - key: MONGO_URI
+      - key: GEMINI_API_KEY
         sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: JWT_REFRESH_SECRET
-        generateValue: true
+      - key: MONGO_URI
+        sync: false
