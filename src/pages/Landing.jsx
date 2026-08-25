@@ -5,8 +5,17 @@ import {
   Sparkles, FileText, Mail, Globe, Target, ChevronRight,
   ArrowRight, Zap, Shield, TrendingUp, BookOpen, Award,
   Brain, Cpu, Layers, CheckCircle2, Play, RefreshCw, Copy,
-  Check, Terminal, Compass, Flame, Star, MousePointerClick
+  Check, Terminal, Compass, Flame, Star, MousePointerClick,
+  ExternalLink, Code2, GraduationCap
 } from 'lucide-react';
+
+function GithubIcon({ className = "w-4 h-4" }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+    </svg>
+  );
+}
 
 // ── Interactive Cursor Follower Spotlight Card ─────────────────
 function SpotlightCard({ children, className = '', color = 'rgba(139,92,246,0.15)' }) {
@@ -446,6 +455,7 @@ export default function Landing() {
             <a href="#demo" className="hover:text-white transition-colors">Live Demo</a>
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#templates" className="hover:text-white transition-colors">Templates</a>
+            <a href="#about" className="hover:text-white transition-colors">About Creator</a>
           </div>
 
           <div className="flex items-center gap-3">
@@ -576,6 +586,107 @@ export default function Landing() {
         <LiveTemplateShowcase />
       </section>
 
+      {/* ── About Developer / Project Creator ──────────────── */}
+      <section id="about" className="max-w-6xl mx-auto px-6 py-20 relative z-10">
+        <div className="text-center mb-12 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-semibold">
+            <GraduationCap className="w-3.5 h-3.5 text-violet-400" /> Developer & Project Creator
+          </div>
+          <h2 className="text-3xl md:text-5xl font-black tracking-tight">About Mohd Rehan</h2>
+          <p className="text-white/50 text-sm max-w-xl mx-auto">Computer Science & Engineering Student · Summer Internship 2026 Project</p>
+        </div>
+
+        <SpotlightCard className="p-8 md:p-12" color="rgba(139,92,246,0.2)">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+            {/* Profile Column */}
+            <div className="flex flex-col items-center text-center lg:items-start lg:text-left space-y-4 border-b lg:border-b-0 lg:border-r border-white/10 pb-8 lg:pb-0 lg:pr-8">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500 via-purple-600 to-cyan-500 p-1 shadow-2xl shadow-violet-500/30">
+                  <div className="w-full h-full bg-[#0f0f1a] rounded-[22px] flex items-center justify-center text-3xl font-black text-white">
+                    MR
+                  </div>
+                </div>
+                <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-emerald-500 border-2 border-[#0a0a0f]" title="Active & Open for Roles" />
+              </div>
+
+              <div>
+                <h3 className="text-2xl font-black text-white">Mohd Rehan</h3>
+                <p className="text-xs text-violet-400 font-semibold mt-0.5">CSE Student & Full-Stack Developer</p>
+                <div className="inline-block px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[11px] text-white/70 font-mono mt-2">
+                  Roll: 25SCS1003003208 · 3rd Sem · 2CSE5
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                <a
+                  href="mailto:codebyrehan@gmail.com"
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-violet-600/20 border border-white/10 hover:border-violet-500/40 text-xs font-semibold text-white/80 hover:text-white flex items-center gap-1.5 transition-all"
+                >
+                  <Mail className="w-3.5 h-3.5 text-violet-400" /> Send Email
+                </a>
+                <a
+                  href="https://github.com/codebyrehan"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/80 hover:text-white flex items-center gap-1.5 transition-all"
+                >
+                  <GithubIcon className="w-3.5 h-3.5 text-white" /> GitHub Profile
+                </a>
+              </div>
+            </div>
+
+            {/* Project & Tech Specs Column */}
+            <div className="lg:col-span-2 space-y-6">
+              <div>
+                <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                  <Code2 className="w-5 h-5 text-violet-400" />
+                  AI-Powered Dynamic Career Development Suite for Students
+                </h4>
+                <p className="text-xs text-white/60 leading-relaxed">
+                  Developed as an end-to-end cloud SaaS platform designed to eliminate the student resume creation bottleneck. Integrates Google Gemini 1.5 Flash AI proxy pipelines for real-time ATS optimization, STAR-format bullet rewrites, role-specific cover letters, and client-side PDF rendering.
+                </p>
+              </div>
+
+              {/* GitHub Repository Box */}
+              <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-violet-500/40 transition-all space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <GithubIcon className="w-4 h-4 text-violet-400" />
+                    <span className="text-xs font-bold text-white">Project Source Code</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Active Repository
+                  </span>
+                </div>
+                <p className="text-[11px] text-white/50 font-mono break-all bg-black/30 p-2.5 rounded-xl border border-white/5">
+                  codebyrehan/SummerInternship_MohdRehan_25SCS1003003208_3rdSem_2CSE5
+                </p>
+                <a
+                  href="https://github.com/codebyrehan/SummerInternship_MohdRehan_25SCS1003003208_3rdSem_2CSE5"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-400 hover:text-violet-300 pt-1 transition-colors"
+                >
+                  Explore GitHub Repository <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              {/* Technologies Used */}
+              <div>
+                <span className="text-[11px] font-semibold text-white/40 uppercase tracking-wider block mb-2">Core Tech Stack</span>
+                <div className="flex flex-wrap gap-2">
+                  {['React 18', 'Vite', 'Tailwind CSS', 'Google Gemini 1.5 Flash', 'Express.js', 'Node.js', 'Framer Motion', 'html2pdf.js'].map((t) => (
+                    <span key={t} className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white/75 font-medium">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </SpotlightCard>
+      </section>
+
       {/* ── Final Call to Action ────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-6 py-24 text-center">
         <SpotlightCard className="p-12 md:p-16 text-center" color="rgba(139,92,246,0.25)">
@@ -599,14 +710,26 @@ export default function Landing() {
       </section>
 
       {/* ── Footer ──────────────────────────────────────────── */}
-      <footer className="border-t border-white/5 py-10 px-6 max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/40">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-violet-600 flex items-center justify-center">
+      <footer className="border-t border-white/5 py-12 px-6 max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-white/40">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
             <Sparkles className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="font-bold text-white/70">QuickHire AI Career Development Suite</span>
+          <div>
+            <span className="font-bold text-white/80 block">QuickHire AI Career Development Suite</span>
+            <span className="text-[10px] text-white/40">Created by Mohd Rehan (25SCS1003003208)</span>
+          </div>
         </div>
-        <div>Built with React, TailwindCSS & Google Gemini AI</div>
+        
+        <div className="flex items-center gap-6 text-white/60">
+          <a href="https://github.com/codebyrehan/SummerInternship_MohdRehan_25SCS1003003208_3rdSem_2CSE5" target="_blank" rel="noreferrer" className="hover:text-white flex items-center gap-1.5 transition-colors">
+            <GithubIcon className="w-3.5 h-3.5" /> Project Repository
+          </a>
+          <a href="mailto:codebyrehan@gmail.com" className="hover:text-white flex items-center gap-1.5 transition-colors">
+            <Mail className="w-3.5 h-3.5" /> codebyrehan@gmail.com
+          </a>
+        </div>
+
         <div>© 2026 QuickHire AI · All rights reserved</div>
       </footer>
     </div>
