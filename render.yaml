@@ -1,25 +1,22 @@
 services:
-  # Full-Stack Web Service (Single Unified Frontend + Express Backend)
   - type: web
     name: quickhire-ai-career-suite
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm run render-build
-    startCommand: npm run render-start
+    buildCommand: node scripts/build.cjs
+    startCommand: node server/server.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
+      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+        value: "true"
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false

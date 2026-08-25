@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node server/server.js",
-    "render-build": "npm install && cd server && npm install && cd .. && npm run build",
+    "render-build": "node scripts/build.cjs",
     "render-start": "node server/server.js"
   },
   "dependencies": {
@@ -48,5 +48,8 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^3.4.19",
     "vite": "^8.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
