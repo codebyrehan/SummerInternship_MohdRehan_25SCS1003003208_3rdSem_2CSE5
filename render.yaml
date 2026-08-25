@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install && node scripts/build.cjs
+    buildCommand: npm install --include=dev && node scripts/build.cjs
     startCommand: node server/server.js
     healthCheckPath: /api/health
     envVars:
